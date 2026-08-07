@@ -81,50 +81,40 @@ public class SecurityConfig {
                         // =================================
 
                         .requestMatchers(
+        HttpMethod.GET,
+        "/events"
+        ).permitAll()
 
-                                "/events",
+        .requestMatchers(
+        "/events/all",
+        "/events/approve/**",
+        "/events/reject/**"
+        ).hasRole("ADMIN")
 
-                                "/events/**"
-
-                        ).permitAll()
+        .requestMatchers(
+        "/events/**"
+        ).authenticated()
 
                         // =================================
                         // CHAT + WEBSOCKET
                         // =================================
-
                         .requestMatchers(
-
-                                "/chat/**",
-
-                                "/messages/**",
-
-                                "/conversations/**",
-
-                                "/topic/**",
-
-                                "/app/**",
-
-                                "/ws/**"
-
-                        ).permitAll()
+    "/messages/**",
+    "/conversations/**"
+).authenticated()
 
                         // =================================
                         // USERS + STUDENTS
                         // =================================
 
-                      .requestMatchers(
-
+                     .requestMatchers(
     "/users/**",
-
     "/students",
-
     "/students/**",
-
-    "/notifications/**",
-
-    "/approve/**"
-
+    "/notifications/**"
 ).permitAll()
+
+.requestMatchers("/approve/**").hasRole("ADMIN")
 
                         // =================================
                         // H2 CONSOLE

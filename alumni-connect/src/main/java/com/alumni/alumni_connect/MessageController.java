@@ -1,9 +1,13 @@
 package com.alumni.alumni_connect;
-
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 
@@ -33,19 +37,18 @@ public class MessageController {
     private final NotificationService
             notificationService;
 
+        private final UserRepository
+         userRepository;
     // =====================================
     // CONSTRUCTOR
     // =====================================
 
     public MessageController(
-
-            SimpMessagingTemplate messagingTemplate,
-
-            MessageRepository repository,
-
-            NotificationService notificationService
-
-    ) {
+        SimpMessagingTemplate messagingTemplate,
+        MessageRepository repository,
+        NotificationService notificationService,
+        UserRepository userRepository
+) {
 
         this.messagingTemplate =
                 messagingTemplate;
@@ -55,179 +58,157 @@ public class MessageController {
 
         this.notificationService =
                 notificationService;
+
+        this.userRepository =
+                userRepository;
     }
 
     // =====================================
     // SEND MESSAGE
     // =====================================
-
     @MessageMapping("/chat")
+public void sendMessage(@Payload Message message) {
 
-    public void sendMessage(
+    // Get the real logged-in user from JWT
+    String authenticatedEmail =
+            SecurityContextHolder
+                    .getContext()
+                    .getAuthentication()
+                    .getName();
+if (message.getReceiverEmail() == null
+        || message.getReceiverEmail().isBlank()) {
 
-            @Payload Message message
+    System.out.println("MESSAGE REJECTED: Receiver missing");
+    return;
+}
 
-    ) {
+if (!userRepository.findByEmail(message.getReceiverEmail()).isPresent()) {
 
-        // SET TIMESTAMP
+    System.out.println("MESSAGE REJECTED: Receiver does not exist");
+    return;
+}
 
-        message.setTimestamp(
-                LocalDateTime.now()
-        );
+    // NEVER trust senderEmail from frontend
+    message.setSenderEmail(authenticatedEmail);
+if (message.getContent() == null
+        || message.getContent().isBlank()) {
 
-        // SAVE TO MYSQL
+    System.out.println("MESSAGE REJECTED: Empty content");
+    return;
+}
 
-        Message saved =
-                repository.save(message);
+if (message.getContent().length() > 2000) {
 
-        // =================================
-        // REALTIME CHAT
-        // =================================
+    System.out.println("MESSAGE REJECTED: Content too long");
+    return;
+}
+    // Server controls timestamp
+    message.setTimestamp(LocalDateTime.now());
 
-        // SEND TO RECEIVER
+    // Save
+    Message saved = repository.save(message);
 
-        messagingTemplate.convertAndSend(
+    // Send to receiver
+    messagingTemplate.convertAndSend(
+            "/topic/messages/" + saved.getReceiverEmail(),
+            saved
+    );
 
-                "/topic/messages/"
-                        + message.getReceiverEmail(),
+    // Send back to sender
+    messagingTemplate.convertAndSend(
+            "/topic/messages/" + saved.getSenderEmail(),
+            saved
+    );
 
-                saved
-        );
+    // Notification
+    notificationService.sendNotification(
+            saved.getReceiverEmail(),
+            "New message from " + saved.getSenderEmail(),
+            "MESSAGE",
+            "/chat/" + saved.getSenderEmail()
+    );
 
-        // SEND BACK TO SENDER
-
-        messagingTemplate.convertAndSend(
-
-                "/topic/messages/"
-                        + message.getSenderEmail(),
-
-                saved
-        );
-
-        // =================================
-        // REALTIME NOTIFICATION
-        // =================================
-
-        notificationService.sendNotification(
-
-                message.getReceiverEmail(),
-
-                "New message from "
-                        + message.getSenderEmail(),
-
-                "MESSAGE",
-
-                "/chat/"
-                        + message.getSenderEmail()
-        );
-
-        System.out.println(
-
-                "MESSAGE SENT: "
-                        + message.getContent()
-        );
-    }
+    System.out.println(
+            "MESSAGE SENT: " + saved.getContent()
+    );
+}
 
     // =====================================
     // GET CONVERSATION
     // =====================================
+    @GetMapping("/messages/conversation")
+public List<Message> getConversation(
 
-    @GetMapping(
-            "/messages/conversation"
-    )
+        @RequestParam String sender,
 
-    public List<Message> getConversation(
+        @RequestParam String receiver
 
-            @RequestParam String sender,
+) {
 
-            @RequestParam String receiver
+    String authenticatedEmail =
+            SecurityContextHolder
+                    .getContext()
+                    .getAuthentication()
+                    .getName();
 
-    ) {
+    if (!authenticatedEmail.equals(sender)
+            && !authenticatedEmail.equals(receiver)) {
 
-        return repository.findConversation(
-
-                sender,
-
-                receiver
+        throw new ResponseStatusException(
+                HttpStatus.FORBIDDEN,
+                "You are not part of this conversation"
         );
     }
 
+    return repository.findConversation(
+            sender,
+            receiver
+    );
+}
     // =====================================
     // GET INBOX CONVERSATIONS
     // =====================================
 
-    @GetMapping(
-            "/conversations/{email}"
-    )
+    @GetMapping("/conversations")
+public List<ConversationDTO> getConversations() {
 
-    public List<ConversationDTO>
-    getConversations(
+    String email = SecurityContextHolder
+            .getContext()
+            .getAuthentication()
+            .getName();
 
-            @PathVariable String email
+    List<Message> messages =
+            repository.findInboxMessages(email);
 
-    ) {
+    Map<String, ConversationDTO> map =
+            new LinkedHashMap<>();
 
-        List<Message> messages =
+    for (Message msg : messages) {
 
-                repository.findInboxMessages(
-                        email
-                );
+        String otherUser;
 
-        Map<String, ConversationDTO>
-                map = new LinkedHashMap<>();
+        if (msg.getSenderEmail().equals(email)) {
 
-        for (Message msg : messages) {
+            otherUser = msg.getReceiverEmail();
 
-            String otherUser;
+        } else {
 
-            // DETERMINE OTHER USER
-
-            if (
-
-                    msg.getSenderEmail()
-                            .equals(email)
-
-            ) {
-
-                otherUser =
-                        msg.getReceiverEmail();
-
-            }
-
-            else {
-
-                otherUser =
-                        msg.getSenderEmail();
-            }
-
-            // ONLY LATEST MESSAGE
-
-            if (
-
-                    !map.containsKey(
-                            otherUser
-                    )
-
-            ) {
-
-                map.put(
-
-                        otherUser,
-
-                        new ConversationDTO(
-
-                                otherUser,
-
-                                msg.getContent(),
-
-                                msg.getTimestamp()
-                        )
-                );
-            }
+            otherUser = msg.getSenderEmail();
         }
 
-        return new ArrayList<>(
-                map.values()
-        );
+        if (!map.containsKey(otherUser)) {
+
+            map.put(
+                    otherUser,
+                    new ConversationDTO(
+                            otherUser,
+                            msg.getContent(),
+                            msg.getTimestamp()
+                    )
+            );
+        }
     }
+
+    return new ArrayList<>(map.values());
+}
 }

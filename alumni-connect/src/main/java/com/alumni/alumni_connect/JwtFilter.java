@@ -99,9 +99,8 @@ public class JwtFilter implements Filter {
                         // EVENTS
                         // =================================
 
-                        path.startsWith("/events")
 
-                        ||
+                
 
                         // =================================
                         // NOTIFICATIONS
@@ -150,10 +149,6 @@ public class JwtFilter implements Filter {
                         // =================================
                         // MESSAGES
                         // =================================
-
-                        path.startsWith("/messages")
-
-                        ||
 
                         path.startsWith("/conversations")
 
