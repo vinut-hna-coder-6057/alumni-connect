@@ -1,7 +1,7 @@
 package com.alumni.alumni_connect;
 
 import org.springframework.web.bind.annotation.*;
-
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import java.util.Optional;
@@ -11,6 +11,8 @@ import java.util.Optional;
 @CrossOrigin(origins = "http://localhost:4200")
 
 public class AuthController {
+@Autowired
+private JwtUtil jwtUtil;
 
     private final UserRepository repository;
 
@@ -117,8 +119,7 @@ public class AuthController {
         }
 
         // ✅ GENERATE JWT
-
-        return JwtUtil.generateToken(
+        return jwtUtil.generateToken(
 
                 existing.getEmail(),
 

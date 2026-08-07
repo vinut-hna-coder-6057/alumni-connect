@@ -4,7 +4,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-// ✅ IMPORTANT IMPORTS
 import com.alumni.alumni_connect.User;
 import com.alumni.alumni_connect.UserRepository;
 

@@ -14,6 +14,7 @@ import jakarta.servlet.http.HttpServletRequest;
 
 import jakarta.servlet.http.HttpServletResponse;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -29,6 +30,8 @@ import java.util.List;
 @Component
 
 public class JwtFilter implements Filter {
+        @Autowired
+        private JwtUtil jwtUtil;
 
     @Override
 
@@ -234,10 +237,10 @@ public class JwtFilter implements Filter {
             // =================================
             // EXTRACT EMAIL
             // =================================
-
+                
             String email =
 
-                    JwtUtil.extractEmail(
+                    jwtUtil.extractEmail(
                             token
                     );
 
@@ -247,7 +250,7 @@ public class JwtFilter implements Filter {
 
             String role =
 
-                    JwtUtil.extractRole(
+                    jwtUtil.extractRole(
                             token
                     );
 
