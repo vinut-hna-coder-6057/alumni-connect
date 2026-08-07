@@ -75,61 +75,37 @@ private JwtUtil jwtUtil;
     }
 
     // 🔹 LOGIN
-
     @PostMapping("/login")
+public Object login(@RequestBody User user) {
 
-    public Object login(
-            @RequestBody User user
-    ) {
+    Optional<User> optionalUser =
+            repository.findByEmailAndRole(
+                    user.getEmail(),
+                    user.getRole()
+            );
 
-        Optional<User> optionalUser =
-
-                repository.findByEmailAndRole(
-
-                        user.getEmail(),
-
-                        user.getRole()
-                );
-
-        // ❌ USER NOT FOUND
-
-        if (optionalUser.isEmpty()) {
-
-            return "User not found for selected role";
-        }
-
-        User existing = optionalUser.get();
-
-        // ❌ WRONG PASSWORD
-
-        if (!encoder.matches(
-
-                user.getPassword(),
-
-                existing.getPassword()
-
-        )) {
-
-            return "Invalid password";
-        }
-
-        // ⏳ WAIT APPROVAL
-
-        if ("PENDING".equals(
-                existing.getStatus()
-        )) {
-
-            return "WAIT_APPROVAL";
-        }
-
-        // ✅ GENERATE JWT
-        return jwtUtil.generateToken(
-
-                existing.getEmail(),
-
-                existing.getRole()
-        );
+    if (optionalUser.isEmpty()) {
+        return "Invalid credentials";
     }
+
+    User existing = optionalUser.get();
+
+    if ("PENDING".equals(existing.getStatus())) {
+        return "WAIT_APPROVAL";
+    }
+
+    if (!encoder.matches(
+            user.getPassword(),
+            existing.getPassword()
+    )) {
+        return "Invalid credentials";
+    }
+
+    return jwtUtil.generateToken(
+            existing.getEmail(),
+            existing.getRole()
+    );
+}
 
     // 🔹 APPROVE USER
 
