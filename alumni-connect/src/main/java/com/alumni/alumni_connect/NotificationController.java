@@ -12,15 +12,14 @@ import java.util.List;
 
 public class NotificationController {
 
-    private final NotificationRepository repository;
+    private final NotificationService notificationService;
 
     public NotificationController(
-
-            NotificationRepository repository
-
+            NotificationService notificationService
     ) {
 
-        this.repository = repository;
+        this.notificationService =
+                notificationService;
     }
 
     // =====================================
@@ -37,10 +36,8 @@ public class NotificationController {
 
     ) {
 
-        return repository
-                .findByEmailOrderByTimestampDesc(
-                        email
-                );
+        return notificationService
+                .getNotifications(email);
     }
 
     // =====================================
@@ -57,10 +54,8 @@ public class NotificationController {
 
     ) {
 
-        return repository
-                .countByEmailAndIsReadFalse(
-                        email
-                );
+        return notificationService
+                .getUnreadCount(email);
     }
 
     // =====================================
@@ -77,15 +72,7 @@ public class NotificationController {
 
     ) {
 
-        Notification notification =
-                repository.findById(id)
-
-                        .orElseThrow();
-
-        notification.setRead(true);
-
-        return repository.save(
-                notification
-        );
+        return notificationService
+                .markRead(id);
     }
 }
