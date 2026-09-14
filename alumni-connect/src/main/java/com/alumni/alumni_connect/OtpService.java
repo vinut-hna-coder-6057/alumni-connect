@@ -3,7 +3,6 @@ package com.alumni.alumni_connect;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
 import java.util.Random;
 
 @Service
@@ -11,52 +10,55 @@ public class OtpService {
 
     private final OtpRepository otpRepository;
 
-    public OtpService(OtpRepository otpRepository) {
+    public OtpService(
+            OtpRepository otpRepository
+    ) {
 
-        this.otpRepository = otpRepository;
+        this.otpRepository =
+                otpRepository;
     }
 
     // =====================================
     // GENERATE OTP
     // =====================================
 
-    public String generateOtp(String email) {
+    public String generateOtp(
+            String email
+    ) {
 
         Random random = new Random();
 
         int number =
                 100000 + random.nextInt(900000);
 
-        String otp =
+        String otpValue =
                 String.valueOf(number);
 
-        // REMOVE PREVIOUS OTP
-        otpRepository.deleteByEmail(email);
+        // REMOVE OLD OTP
+
+        otpRepository.deleteByEmail(
+                email
+        );
 
         // CREATE NEW OTP
-        Otp otpEntity = new Otp();
 
-        otpEntity.setEmail(email);
+        Otp otp =
+                new Otp();
 
-        otpEntity.setOtp(otp);
+        otp.setEmail(email);
 
-        otpEntity.setExpiresAt(
-                LocalDateTime.now().plusMinutes(5)
+        otp.setOtp(otpValue);
+
+        otp.setExpiry(
+                LocalDateTime.now()
+                        .plusMinutes(5)
         );
 
-        otpEntity.setVerified(false);
+        otp.setVerified(false);
 
-        // SAVE TO MYSQL
-        otpRepository.save(otpEntity);
+        otpRepository.save(otp);
 
-        System.out.println(
-                "OTP GENERATED FOR "
-                        + email
-                        + ": "
-                        + otp
-        );
-
-        return otp;
+        return otpValue;
     }
 
     // =====================================
@@ -65,51 +67,52 @@ public class OtpService {
 
     public boolean verifyOtp(
             String email,
-            String otp
+            String otpValue
     ) {
 
-        // FIND LATEST OTP
-        Optional<Otp> optionalOtp =
+        Otp otp =
                 otpRepository
-                        .findTopByEmailOrderByIdDesc(email);
+                        .findByEmail(email)
+                        .orElse(null);
 
-        // OTP DOES NOT EXIST
-        if (optionalOtp.isEmpty()) {
+        // OTP NOT FOUND
+
+        if (otp == null) {
 
             return false;
         }
 
-        Otp otpEntity =
-                optionalOtp.get();
-
         // CHECK EXPIRY
+
         if (
-                otpEntity.getExpiresAt()
+                otp.getExpiry()
                         .isBefore(
                                 LocalDateTime.now()
                         )
         ) {
 
-            otpRepository.deleteById(
-                    otpEntity.getId()
+            otpRepository.deleteByEmail(
+                    email
             );
 
             return false;
         }
 
         // CHECK OTP
+
         if (
-                !otpEntity.getOtp()
-                        .equals(otp)
+                !otp.getOtp()
+                        .equals(otpValue)
         ) {
 
             return false;
         }
 
-        // MARK AS VERIFIED
-        otpEntity.setVerified(true);
+        // MARK VERIFIED
 
-        otpRepository.save(otpEntity);
+        otp.setVerified(true);
+
+        otpRepository.save(otp);
 
         return true;
     }
