@@ -6,6 +6,10 @@ import org.springframework.stereotype.Service;
 @Service
 public class PasswordResetService {
 
+    // =====================================
+    // DEPENDENCIES
+    // =====================================
+
     private final UserRepository userRepository;
 
     private final OtpService otpService;
@@ -16,12 +20,22 @@ public class PasswordResetService {
 
     private final OtpRepository otpRepository;
 
+    // =====================================
+    // CONSTRUCTOR
+    // =====================================
+
     public PasswordResetService(
+
             UserRepository userRepository,
+
             OtpService otpService,
+
             EmailService emailService,
+
             PasswordEncoder passwordEncoder,
+
             OtpRepository otpRepository
+
     ) {
 
         this.userRepository =
@@ -45,8 +59,12 @@ public class PasswordResetService {
     // =====================================
 
     public String forgotPassword(
+
             ForgotPasswordRequest request
+
     ) {
+
+        // CHECK USER
 
         User user =
                 userRepository.findByEmail(
@@ -58,10 +76,14 @@ public class PasswordResetService {
             return "User not found";
         }
 
+        // GENERATE OTP
+
         String otp =
                 otpService.generateOtp(
                         request.getEmail()
                 );
+
+        // SEND OTP EMAIL
 
         emailService.sendOtpEmail(
                 request.getEmail(),
@@ -76,7 +98,9 @@ public class PasswordResetService {
     // =====================================
 
     public String verifyOtp(
+
             VerifyOtpRequest request
+
     ) {
 
         boolean valid =
@@ -98,10 +122,14 @@ public class PasswordResetService {
     // =====================================
 
     public String resetPassword(
+
             ResetPasswordRequest request
+
     ) {
 
+        // =====================================
         // CHECK OTP WAS VERIFIED
+        // =====================================
 
         boolean otpVerified =
                 otpRepository
@@ -115,7 +143,9 @@ public class PasswordResetService {
             return "OTP verification required";
         }
 
+        // =====================================
         // FIND USER
+        // =====================================
 
         User user =
                 userRepository.findByEmail(
@@ -127,7 +157,9 @@ public class PasswordResetService {
             return "User not found";
         }
 
+        // =====================================
         // ENCODE NEW PASSWORD
+        // =====================================
 
         user.setPassword(
                 passwordEncoder.encode(
@@ -135,11 +167,15 @@ public class PasswordResetService {
                 )
         );
 
+        // =====================================
         // SAVE USER
+        // =====================================
 
         userRepository.save(user);
 
-        // CONSUME VERIFIED OTP
+        // =====================================
+        // DELETE USED OTP
+        // =====================================
 
         otpRepository.deleteByEmail(
                 request.getEmail()
