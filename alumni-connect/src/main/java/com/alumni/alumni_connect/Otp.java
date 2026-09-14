@@ -1,4 +1,3 @@
-
 package com.alumni.alumni_connect;
 
 import jakarta.persistence.*;
@@ -13,11 +12,13 @@ public class Otp {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false)
     private String email;
 
+    @Column(nullable = false)
     private String otp;
 
-    private LocalDateTime expiresAt;
+    private LocalDateTime expiry;
 
     private boolean verified = false;
 
@@ -44,12 +45,12 @@ public class Otp {
         this.otp = otp;
     }
 
-    public LocalDateTime getExpiresAt() {
-        return expiresAt;
+    public LocalDateTime getExpiry() {
+        return expiry;
     }
 
-    public void setExpiresAt(LocalDateTime expiresAt) {
-        this.expiresAt = expiresAt;
+    public void setExpiry(LocalDateTime expiry) {
+        this.expiry = expiry;
     }
 
     public boolean isVerified() {
