@@ -1,6 +1,9 @@
 package com.alumni.alumni_connect;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -27,14 +30,13 @@ public class NotificationController {
     // =====================================
 
     @GetMapping(
-            "/notifications/{email}"
+            "/notifications"
     )
 
-    public List<Notification> getNotifications(
+    public List<Notification> getNotifications() {
 
-            @PathVariable String email
-
-    ) {
+        String email =
+                getAuthenticatedEmail();
 
         return notificationService
                 .getNotifications(email);
@@ -45,14 +47,13 @@ public class NotificationController {
     // =====================================
 
     @GetMapping(
-            "/notifications/unread/{email}"
+            "/notifications/unread"
     )
 
-    public long getUnreadCount(
+    public long getUnreadCount() {
 
-            @PathVariable String email
-
-    ) {
+        String email =
+                getAuthenticatedEmail();
 
         return notificationService
                 .getUnreadCount(email);
@@ -72,7 +73,35 @@ public class NotificationController {
 
     ) {
 
+        String email =
+                getAuthenticatedEmail();
+
         return notificationService
-                .markRead(id);
+                .markRead(id, email);
+    }
+
+    // =====================================
+    // GET LOGGED-IN USER EMAIL
+    // =====================================
+
+    private String getAuthenticatedEmail() {
+
+        if (
+                SecurityContextHolder
+                        .getContext()
+                        .getAuthentication()
+                        == null
+        ) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Authentication required"
+            );
+        }
+
+        return SecurityContextHolder
+                .getContext()
+                .getAuthentication()
+                .getName();
     }
 }
