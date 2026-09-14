@@ -11,6 +11,7 @@ public interface OtpRepository
     Optional<Otp> findTopByEmailOrderByIdDesc(
             String email
     );
+    Optional<Otp> findByEmailAndVerifiedTrue(String email);
 
     void deleteByEmail(String email);
 }
