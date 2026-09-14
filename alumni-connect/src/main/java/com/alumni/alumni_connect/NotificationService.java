@@ -1,7 +1,9 @@
 package com.alumni.alumni_connect;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -14,13 +16,18 @@ public class NotificationService {
     private final SimpMessagingTemplate messagingTemplate;
 
     public NotificationService(
+
             NotificationRepository repository,
+
             SimpMessagingTemplate messagingTemplate
+
     ) {
 
-        this.repository = repository;
+        this.repository =
+                repository;
 
-        this.messagingTemplate = messagingTemplate;
+        this.messagingTemplate =
+                messagingTemplate;
     }
 
     // =====================================
@@ -28,10 +35,15 @@ public class NotificationService {
     // =====================================
 
     public void sendNotification(
+
             String email,
+
             String message,
+
             String type,
+
             String linkUrl
+
     ) {
 
         Notification notification =
@@ -57,13 +69,15 @@ public class NotificationService {
         // REALTIME WEBSOCKET
 
         messagingTemplate.convertAndSend(
+
                 "/topic/notifications/" + email,
+
                 saved
         );
     }
 
     // =====================================
-    // GET USER NOTIFICATIONS
+    // GET NOTIFICATIONS
     // =====================================
 
     public List<Notification> getNotifications(
@@ -77,7 +91,7 @@ public class NotificationService {
     }
 
     // =====================================
-    // GET UNREAD COUNT
+    // UNREAD COUNT
     // =====================================
 
     public long getUnreadCount(
@@ -91,16 +105,45 @@ public class NotificationService {
     }
 
     // =====================================
-    // MARK NOTIFICATION AS READ
+    // MARK READ
     // =====================================
 
     public Notification markRead(
-            Long id
+
+            Long id,
+
+            String email
+
     ) {
 
         Notification notification =
                 repository.findById(id)
-                        .orElseThrow();
+                        .orElseThrow(() ->
+                                new ResponseStatusException(
+                                        HttpStatus.NOT_FOUND,
+                                        "Notification not found"
+                                )
+                        );
+
+        // =====================================
+        // CHECK OWNERSHIP
+        // =====================================
+
+        if (
+                !notification
+                        .getEmail()
+                        .equals(email)
+        ) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "You cannot modify this notification"
+            );
+        }
+
+        // =====================================
+        // MARK AS READ
+        // =====================================
 
         notification.setRead(true);
 
