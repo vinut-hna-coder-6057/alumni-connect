@@ -72,10 +72,5 @@ public class NotificationService {
                 saved
         );
 
-        System.out.println(
-
-                "NOTIFICATION SENT TO: "
-                        + email
-        );
     }
 }
