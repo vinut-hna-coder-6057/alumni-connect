@@ -4,9 +4,9 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
-
 public class NotificationService {
 
     private final NotificationRepository repository;
@@ -14,17 +14,13 @@ public class NotificationService {
     private final SimpMessagingTemplate messagingTemplate;
 
     public NotificationService(
-
             NotificationRepository repository,
-
             SimpMessagingTemplate messagingTemplate
-
     ) {
 
         this.repository = repository;
 
-        this.messagingTemplate =
-                messagingTemplate;
+        this.messagingTemplate = messagingTemplate;
     }
 
     // =====================================
@@ -32,15 +28,10 @@ public class NotificationService {
     // =====================================
 
     public void sendNotification(
-
             String email,
-
             String message,
-
             String type,
-
             String linkUrl
-
     ) {
 
         Notification notification =
@@ -66,11 +57,55 @@ public class NotificationService {
         // REALTIME WEBSOCKET
 
         messagingTemplate.convertAndSend(
-
                 "/topic/notifications/" + email,
-
                 saved
         );
+    }
 
+    // =====================================
+    // GET USER NOTIFICATIONS
+    // =====================================
+
+    public List<Notification> getNotifications(
+            String email
+    ) {
+
+        return repository
+                .findByEmailOrderByTimestampDesc(
+                        email
+                );
+    }
+
+    // =====================================
+    // GET UNREAD COUNT
+    // =====================================
+
+    public long getUnreadCount(
+            String email
+    ) {
+
+        return repository
+                .countByEmailAndIsReadFalse(
+                        email
+                );
+    }
+
+    // =====================================
+    // MARK NOTIFICATION AS READ
+    // =====================================
+
+    public Notification markRead(
+            Long id
+    ) {
+
+        Notification notification =
+                repository.findById(id)
+                        .orElseThrow();
+
+        notification.setRead(true);
+
+        return repository.save(
+                notification
+        );
     }
 }
