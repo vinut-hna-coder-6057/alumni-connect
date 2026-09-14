@@ -3,7 +3,7 @@ package com.alumni.alumni_connect;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-
+import org.springframework.security.access.prepost.PreAuthorize;
 import java.util.Optional;
 
 @RestController
@@ -104,23 +104,19 @@ public Object login(@RequestBody User user) {
 }
 
     // 🔹 APPROVE USER
+// 🔹 APPROVE USER
 
-    @PutMapping("/approve/{id}")
+@PutMapping("/approve/{id}")
+@PreAuthorize("hasRole('ADMIN')")
+public User approveUser(
+        @PathVariable Long id
+) {
 
-    public User approveUser(
+    User user = repository
+            .findById(id)
+            .orElseThrow();
 
-            @PathVariable Long id
+    user.setStatus("APPROVED");
 
-    ) {
-
-        User user = repository
-
-                .findById(id)
-
-                .orElseThrow();
-
-        user.setStatus("APPROVED");
-
-        return repository.save(user);
-    }
+    return repository.save(user);
 }
