@@ -63,10 +63,6 @@ private JwtUtil jwtUtil;
 
         // ⏳ WAIT FOR APPROVAL
 
-        user.setPassword(
-        encoder.encode(user.getPassword())
-        );
-
         user.setStatus("PENDING");
 
         repository.save(user);
