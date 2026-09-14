@@ -1,60 +1,42 @@
 package com.alumni.alumni_connect;
 
 import jakarta.servlet.Filter;
-
 import jakarta.servlet.FilterChain;
-
 import jakarta.servlet.ServletException;
-
 import jakarta.servlet.ServletRequest;
-
 import jakarta.servlet.ServletResponse;
-
 import jakarta.servlet.http.HttpServletRequest;
-
 import jakarta.servlet.http.HttpServletResponse;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-
 import org.springframework.security.core.context.SecurityContextHolder;
-
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-
 import java.util.List;
 
 @Component
-
 public class JwtFilter implements Filter {
-        @Autowired
-        private JwtUtil jwtUtil;
+
+    @Autowired
+    private JwtUtil jwtUtil;
 
     @Override
-
     public void doFilter(
-
             ServletRequest request,
-
             ServletResponse response,
-
             FilterChain chain
-
     ) throws IOException, ServletException {
 
         HttpServletRequest req =
-
                 (HttpServletRequest) request;
 
         HttpServletResponse res =
-
                 (HttpServletResponse) response;
 
         String path =
-
                 req.getRequestURI();
 
         // =====================================
@@ -70,96 +52,17 @@ public class JwtFilter implements Filter {
         // =====================================
 
         if (
-
                 path.equals("/")
-
                         ||
-
-                        path.equals("/login")
-
+                path.equals("/login")
                         ||
-
-                        path.equals("/signup")
-
+                path.equals("/signup")
                         ||
-
-                        path.equals("/forgot-password")
-
+                path.equals("/forgot-password")
                         ||
-
-                        path.equals("/verify-otp")
-
+                path.equals("/verify-otp")
                         ||
-
-                        path.equals("/reset-password")
-
-                        ||
-
-                        // =================================
-                        // EVENTS
-                        // =================================
-
-
-                
-
-                        // =================================
-                        // NOTIFICATIONS
-                        // =================================
-
-                        path.startsWith("/notifications")
-
-                        ||
-
-                        // =================================
-                        // STUDENTS
-                        // =================================
-
-                        path.startsWith("/students")
-
-                        ||
-
-                        // =================================
-                        // CHAT + WEBSOCKET
-                        // =================================
-
-                        path.startsWith("/chat")
-
-                        ||
-
-                        path.startsWith("/topic")
-
-                        ||
-
-                        path.startsWith("/app")
-
-                        ||
-
-                        path.startsWith("/ws")
-
-                        ||
-
-                        // =================================
-                        // USERS
-                        // =================================
-
-                        path.startsWith("/users")
-
-                        ||
-
-                        // =================================
-                        // MESSAGES
-                        // =================================
-
-                        path.startsWith("/conversations")
-
-                        ||
-
-                        // =================================
-                        // H2 CONSOLE
-                        // =================================
-
-                        path.startsWith("/h2-console")
-
+                path.equals("/reset-password")
         ) {
 
             chain.doFilter(
@@ -175,14 +78,10 @@ public class JwtFilter implements Filter {
         // =====================================
 
         String authHeader =
-
-                req.getHeader(
-                        "Authorization"
-                );
+                req.getHeader("Authorization");
 
         System.out.println(
-                "AUTH HEADER: "
-                        + authHeader
+                "AUTH HEADER: " + authHeader
         );
 
         // =====================================
@@ -190,15 +89,9 @@ public class JwtFilter implements Filter {
         // =====================================
 
         if (
-
                 authHeader == null
-
                         ||
-
-                        !authHeader.startsWith(
-                                "Bearer "
-                        )
-
+                !authHeader.startsWith("Bearer ")
         ) {
 
             System.out.println(
@@ -206,13 +99,10 @@ public class JwtFilter implements Filter {
             );
 
             res.setStatus(
-
-                    HttpServletResponse
-                            .SC_UNAUTHORIZED
+                    HttpServletResponse.SC_UNAUTHORIZED
             );
 
             res.getWriter().write(
-
                     "Unauthorized: Token Missing"
             );
 
@@ -224,7 +114,6 @@ public class JwtFilter implements Filter {
         // =====================================
 
         String token =
-
                 authHeader.substring(7);
 
         try {
@@ -232,22 +121,16 @@ public class JwtFilter implements Filter {
             // =================================
             // EXTRACT EMAIL
             // =================================
-                
-            String email =
 
-                    jwtUtil.extractEmail(
-                            token
-                    );
+            String email =
+                    jwtUtil.extractEmail(token);
 
             // =================================
             // EXTRACT ROLE
             // =================================
 
             String role =
-
-                    jwtUtil.extractRole(
-                            token
-                    );
+                    jwtUtil.extractRole(token);
 
             System.out.println(
                     "EMAIL: " + email
@@ -258,7 +141,7 @@ public class JwtFilter implements Filter {
             );
 
             // =================================
-            // CREATE AUTH
+            // CREATE AUTHENTICATION
             // =================================
 
             UsernamePasswordAuthenticationToken
@@ -273,43 +156,33 @@ public class JwtFilter implements Filter {
                             List.of(
 
                                     new SimpleGrantedAuthority(
-
                                             "ROLE_" + role
                                     )
                             )
                     );
 
             // =================================
-            // SET AUTH
+            // SET AUTHENTICATION
             // =================================
 
             SecurityContextHolder
-
                     .getContext()
-
-                    .setAuthentication(
-
-                            authentication
-                    );
+                    .setAuthentication(authentication);
 
         }
 
         catch (Exception e) {
 
             System.out.println(
-
                     "JWT ERROR: "
                             + e.getMessage()
             );
 
             res.setStatus(
-
-                    HttpServletResponse
-                            .SC_UNAUTHORIZED
+                    HttpServletResponse.SC_UNAUTHORIZED
             );
 
             res.getWriter().write(
-
                     "Unauthorized: Invalid Token"
             );
 
@@ -317,7 +190,7 @@ public class JwtFilter implements Filter {
         }
 
         // =====================================
-        // CONTINUE
+        // CONTINUE REQUEST
         // =====================================
 
         chain.doFilter(
