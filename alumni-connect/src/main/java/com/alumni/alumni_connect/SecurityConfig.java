@@ -12,8 +12,12 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 
 import org.springframework.security.web.SecurityFilterChain;
 
-@Configuration
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 
+@Configuration
+    
+@EnableMethodSecurity
+    
 public class SecurityConfig {
 
     @Bean
