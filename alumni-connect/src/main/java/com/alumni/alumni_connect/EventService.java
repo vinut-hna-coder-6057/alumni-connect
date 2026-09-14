@@ -1,7 +1,9 @@
 package com.alumni.alumni_connect;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -54,12 +56,8 @@ public class EventService {
 
         } else {
 
-            // ALUMNI EVENTS REQUIRE APPROVAL
-
             event.setStatus("PENDING");
         }
-
-        // INITIAL RSVP COUNT
 
         event.setAttendeeCount(0);
 
@@ -94,18 +92,13 @@ public class EventService {
 
     public Event approveEvent(Long id) {
 
-        Optional<Event> optionalEvent =
-                eventRepository.findById(id);
-
-        if (optionalEvent.isEmpty()) {
-
-            throw new RuntimeException(
-                    "Event not found"
-            );
-        }
-
         Event event =
-                optionalEvent.get();
+                eventRepository.findById(id)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Event not found"
+                                )
+                        );
 
         event.setStatus("APPROVED");
 
@@ -118,18 +111,13 @@ public class EventService {
 
     public Event rejectEvent(Long id) {
 
-        Optional<Event> optionalEvent =
-                eventRepository.findById(id);
-
-        if (optionalEvent.isEmpty()) {
-
-            throw new RuntimeException(
-                    "Event not found"
-            );
-        }
-
         Event event =
-                optionalEvent.get();
+                eventRepository.findById(id)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Event not found"
+                                )
+                        );
 
         event.setStatus("REJECTED");
 
@@ -140,12 +128,27 @@ public class EventService {
     // REGISTER FOR EVENT
     // =====================================
 
+    @Transactional
     public ResponseEntity<?> registerForEvent(
             Long eventId,
             String studentEmail
     ) {
 
+        // =====================================
+        // GET + LOCK EVENT
+        // =====================================
+
+        Event event =
+                eventRepository.findByIdForUpdate(eventId)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Event not found"
+                                )
+                        );
+
+        // =====================================
         // CHECK DUPLICATE
+        // =====================================
 
         boolean alreadyRegistered =
                 registrationRepository
@@ -164,55 +167,68 @@ public class EventService {
             );
         }
 
+        // =====================================
         // CREATE REGISTRATION
+        // =====================================
 
         EventRegistration registration =
                 new EventRegistration();
 
         registration.setEventId(eventId);
 
-        registration.setStudentEmail(studentEmail);
+        registration.setStudentEmail(
+                studentEmail
+        );
 
         registration.setRegisteredAt(
                 LocalDateTime.now()
         );
 
-        registrationRepository.save(
-                registration
-        );
+        try {
 
-        // UPDATE RSVP COUNT
-
-        Optional<Event> optionalEvent =
-                eventRepository.findById(eventId);
-
-        if (optionalEvent.isPresent()) {
-
-            Event event =
-                    optionalEvent.get();
-
-            event.setAttendeeCount(
-                    event.getAttendeeCount() + 1
+            registrationRepository.save(
+                    registration
             );
 
-            eventRepository.save(event);
+        } catch (DataIntegrityViolationException e) {
 
-            // SEND EMAIL
+            // DATABASE UNIQUE CONSTRAINT
+            // PROTECTS AGAINST RACE CONDITIONS
 
-            emailService.sendEventRegistrationEmail(
-
-                    studentEmail,
-
-                    event.getTitle(),
-
-                    event.getEventDate()
-                            .toString(),
-
-                    event.getLocation(),
-
-                    event.getMeetingLink()
+            return ResponseEntity.ok(
+                    Map.of(
+                            "message",
+                            "Already registered"
+                    )
             );
         }
+
+        // =====================================
+        // UPDATE RSVP COUNT
+        // =====================================
+
+        event.setAttendeeCount(
+                event.getAttendeeCount() + 1
+        );
+
+        eventRepository.save(event);
+
+        // =====================================
+        // SEND EMAIL
+        // =====================================
+
+        emailService.sendEventRegistrationEmail(
+
+                studentEmail,
+
+                event.getTitle(),
+
+                event.getEventDate(),
+
+                event.getLocation(),
+
+                event.getMeetingLink()
+        );
 
         return ResponseEntity.ok(
                 Map.of(
@@ -226,35 +242,68 @@ public class EventService {
     // CANCEL REGISTRATION
     // =====================================
 
+    @Transactional
     public ResponseEntity<?> cancelRegistration(
             Long eventId,
             String studentEmail
     ) {
 
-        registrationRepository
-                .deleteByEventIdAndStudentEmail(
-                        eventId,
-                        studentEmail
-                );
+        // =====================================
+        // LOCK EVENT
+        // =====================================
 
-        // UPDATE RSVP COUNT
+        Event event =
+                eventRepository.findByIdForUpdate(eventId)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Event not found"
+                                )
+                        );
 
-        Optional<Event> optionalEvent =
-                eventRepository.findById(eventId);
+        // =====================================
+        // FIND REGISTRATION
+        // =====================================
 
-        if (optionalEvent.isPresent()) {
+        Optional<EventRegistration> registration =
+                registrationRepository
+                        .findByEventIdAndStudentEmail(
+                                eventId,
+                                studentEmail
+                        );
 
-            Event event =
-                    optionalEvent.get();
+        // =====================================
+        // NOT REGISTERED
+        // =====================================
 
-            if (event.getAttendeeCount() > 0) {
+        if (registration.isEmpty()) {
 
-                event.setAttendeeCount(
-                        event.getAttendeeCount() - 1
-                );
+            return ResponseEntity.ok(
+                    Map.of(
+                            "message",
+                            "Not registered"
+                    )
+            );
+        }
 
-                eventRepository.save(event);
-            }
+        // =====================================
+        // DELETE REGISTRATION
+        // =====================================
+
+        registrationRepository.delete(
+                registration.get()
+        );
+
+        // =====================================
+        // DECREASE COUNT
+        // =====================================
+
+        if (event.getAttendeeCount() > 0) {
+
+            event.setAttendeeCount(
+                    event.getAttendeeCount() - 1
+            );
+
+            eventRepository.save(event);
         }
 
         return ResponseEntity.ok(
