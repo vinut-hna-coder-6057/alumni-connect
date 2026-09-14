@@ -6,7 +6,14 @@ import java.time.LocalDateTime;
 
 @Entity
 
-@Table(name = "event_registrations")
+@Table(
+    name = "event_registrations",
+    uniqueConstraints = {
+        @UniqueConstraint(
+            columnNames = {"eventId", "studentEmail"}
+        )
+    }
+)
 
 public class EventRegistration {
 
