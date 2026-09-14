@@ -107,12 +107,12 @@ public class SecurityConfig {
                         // USERS + STUDENTS
                         // =================================
 
-                     .requestMatchers(
+   .requestMatchers(
     "/users/**",
     "/students",
     "/students/**",
     "/notifications/**"
-).permitAll()
+).authenticated()
 
 .requestMatchers("/approve/**").hasRole("ADMIN")
 
